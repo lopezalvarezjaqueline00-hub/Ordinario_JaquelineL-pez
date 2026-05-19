@@ -15,7 +15,7 @@ import StatusBadge from '../components/StatusBadge'
 import { usePayments } from '../hooks/usePayments'
 import { useProducts } from '../hooks/useProducts'
 import { formatCurrency, formatDate, normalizeText } from '../utils/formatters'
-import { getPaymentItemsLabel } from '../utils/payments'
+import { getPaymentItemsLabel, normalizePaymentType } from '../utils/payments'
 
 export default function DashboardPage({
   onNavigate,
@@ -273,7 +273,8 @@ export default function DashboardPage({
                     {payment.clientName}
                   </p>
                   <p className="mt-1 truncate text-xs text-[color:var(--muted)]">
-                    {payment.type} · {getPaymentItemsLabel(payment)}
+                    {normalizePaymentType(payment.type)} ·{' '}
+                    {getPaymentItemsLabel(payment)}
                   </p>
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-[color:var(--ink)]">

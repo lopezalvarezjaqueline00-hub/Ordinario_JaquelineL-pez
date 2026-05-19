@@ -23,6 +23,7 @@ import {
   getPaymentItemsLabel,
   getPaymentPurchaseTotal,
   normalizePaymentItems,
+  normalizePaymentType,
 } from '../utils/payments'
 
 const initialFilters = {
@@ -32,22 +33,24 @@ const initialFilters = {
 }
 
 const TYPE_STYLES = {
+  'Sin Pago':
+    'border-[color:var(--line)] bg-[color:var(--surface-muted)] text-[color:var(--muted)]',
   Anticipo:
     'border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 text-[color:var(--warning)]',
-  Liquidacion:
-    'border-[color:var(--success)]/30 bg-[color:var(--success)]/10 text-[color:var(--success)]',
-  'Pago completo':
+  'Pago Completo':
     'border-[color:var(--accent)]/30 bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
 }
 
 function PaymentTypeBadge({ type }) {
+  const normalizedType = normalizePaymentType(type)
+
   return (
     <span
       className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
-        TYPE_STYLES[type] || TYPE_STYLES.Anticipo
+        TYPE_STYLES[normalizedType] || TYPE_STYLES.Anticipo
       }`}
     >
-      {type}
+      {normalizedType}
     </span>
   )
 }
@@ -82,10 +85,12 @@ export default function PaymentsPage({
       0,
     )
     const advances = payments
-      .filter((payment) => payment.type === 'Anticipo')
+      .filter((payment) => normalizePaymentType(payment.type) === 'Anticipo')
       .reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
     const completePayments = payments
-      .filter((payment) => payment.type === 'Pago completo')
+      .filter(
+        (payment) => normalizePaymentType(payment.type) === 'Pago Completo',
+      )
       .reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
 
     return {
@@ -102,7 +107,7 @@ export default function PaymentsPage({
     return [...payments]
       .filter((payment) => {
         const itemsText = normalizePaymentItems(payment)
-          .map((item) => `${item.name} ${item.category}`)
+          .map((item) => item.name)
           .join(' ')
         const searchable = normalizeText(
           `${payment.clientName} ${payment.productName} ${itemsText} ${payment.notes}`,
@@ -111,7 +116,8 @@ export default function PaymentsPage({
         const matchesMethod =
           filters.method === 'Todos' || payment.method === filters.method
         const matchesType =
-          filters.type === 'Todos' || payment.type === filters.type
+          filters.type === 'Todos' ||
+          normalizePaymentType(payment.type) === filters.type
 
         return matchesQuery && matchesMethod && matchesType
       })
@@ -210,7 +216,7 @@ export default function PaymentsPage({
             Pagos
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--muted)]">
-            Registra anticipos, liquidaciones y pagos completos con cliente,
+            Registra compras sin pago, anticipos y pagos completos con cliente,
             producto, metodo y notas.
           </p>
         </div>

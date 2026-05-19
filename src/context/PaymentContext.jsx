@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { initialPayments } from '../data/initialPayments'
 import { useCloudStorage } from '../hooks/useCloudStorage'
+import { normalizePaymentType } from '../utils/payments'
 import { generateId, STORAGE_KEYS } from '../utils/storage'
 import { PaymentContext } from './PaymentContextValue'
 
@@ -17,6 +18,7 @@ export function PaymentProvider({ children }) {
         ...payment,
         id: generateId(),
         amount: Number(payment.amount) || 0,
+        type: normalizePaymentType(payment.type),
         paymentDate:
           payment.paymentDate || new Date().toISOString().slice(0, 10),
         createdAt: new Date().toISOString(),
@@ -30,7 +32,12 @@ export function PaymentProvider({ children }) {
       setPayments((current) =>
         current.map((payment) =>
           payment.id === id
-            ? { ...payment, ...updates, amount: Number(updates.amount) || 0 }
+            ? {
+                ...payment,
+                ...updates,
+                amount: Number(updates.amount) || 0,
+                type: normalizePaymentType(updates.type || payment.type),
+              }
             : payment,
         ),
       )

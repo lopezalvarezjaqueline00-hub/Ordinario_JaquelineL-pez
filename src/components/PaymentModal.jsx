@@ -2,11 +2,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { FiCreditCard, FiPlus, FiTrash2, FiX } from 'react-icons/fi'
 import { PAYMENT_METHODS, PAYMENT_TYPES } from '../data/initialPayments'
-import { PRODUCT_CATEGORIES } from '../data/initialProducts'
 import { formatCurrency } from '../utils/formatters'
 import {
   getPaymentPurchaseTotal,
   normalizePaymentItems,
+  normalizePaymentType,
 } from '../utils/payments'
 
 const getToday = () => new Date().toISOString().slice(0, 10)
@@ -17,9 +17,9 @@ const blankPayment = {
   productName: '',
   items: [],
   purchaseTotal: 0,
-  amount: '',
+  amount: '0',
   method: 'Transferencia',
-  type: 'Anticipo',
+  type: 'Sin Pago',
   paymentDate: getToday(),
   notes: '',
 }
@@ -31,13 +31,13 @@ const getInitialForm = (payment) =>
         ...payment,
         items: normalizePaymentItems(payment),
         purchaseTotal: getPaymentPurchaseTotal(payment),
+        type: normalizePaymentType(payment.type),
       }
     : { ...blankPayment }
 
 const blankItem = {
   productId: '',
   name: '',
-  category: 'Ropa',
   quantity: 1,
   price: '',
 }
@@ -54,6 +54,8 @@ export default function PaymentModal({
 }) {
   const [form, setForm] = useState(() => getInitialForm(payment))
   const [itemDraft, setItemDraft] = useState(blankItem)
+  const [formError, setFormError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const title = useMemo(
     () => (payment ? 'Editar pago' : 'Registrar pago'),
     [payment],
@@ -77,13 +79,21 @@ export default function PaymentModal({
     setItemDraft((current) => ({ ...current, [field]: value }))
   }
 
+  const updatePaymentType = (value) => {
+    const type = normalizePaymentType(value)
+    setForm((current) => ({
+      ...current,
+      type,
+      amount: type === 'Sin Pago' && current.amount === '' ? '0' : current.amount,
+    }))
+  }
+
   const handleDraftProductChange = (productId) => {
     const product = products.find((item) => item.id === productId)
     setItemDraft((current) => ({
       ...current,
       productId,
       name: product ? product.name : current.name,
-      category: product ? product.category : current.category,
       price: product ? product.price : current.price,
     }))
   }
@@ -97,6 +107,7 @@ export default function PaymentModal({
       ...itemDraft,
       id: createItemId(),
       name: itemDraft.name.trim(),
+      productId: itemDraft.productId || '',
       quantity: Number(itemDraft.quantity) || 1,
       price: Number(itemDraft.price) || 0,
     }
@@ -106,6 +117,7 @@ export default function PaymentModal({
       items: [...current.items, nextItem],
     }))
     setItemDraft(blankItem)
+    setFormError('')
   }
 
   const removeItem = (itemId) => {
@@ -115,27 +127,66 @@ export default function PaymentModal({
     }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+    setFormError('')
 
-    if (!form.clientName.trim() || !Number(form.amount)) {
+    const clientName = form.clientName.trim()
+    const type = normalizePaymentType(form.type)
+    const amount = Number(form.amount || 0)
+
+    if (!clientName) {
+      setFormError('Escribe el nombre de la clienta para guardar el pago.')
       return
     }
 
-    const firstItem = form.items[0]
-    const productName = form.items.length
-      ? form.items.map((item) => item.name).join(', ')
+    if (Number.isNaN(amount) || amount < 0) {
+      setFormError('El monto recibido debe ser un numero valido.')
+      return
+    }
+
+    if (type !== 'Sin Pago' && amount <= 0) {
+      setFormError('Para anticipo o pago completo, el monto debe ser mayor a cero.')
+      return
+    }
+
+    const items = form.items
+      .map((item) => ({
+        id: item.id || createItemId(),
+        productId: item.productId || '',
+        name: String(item.name || '').trim(),
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.price) || 0,
+      }))
+      .filter((item) => item.name)
+    const total = items.reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+      0,
+    )
+    const firstItem = items[0]
+    const productName = items.length
+      ? items.map((item) => item.name).join(', ')
       : form.productName.trim()
 
-    onSave({
-      ...form,
-      clientName: form.clientName.trim(),
-      productId: firstItem?.productId || form.productId || '',
-      productName,
-      items: form.items,
-      purchaseTotal,
-      amount: Number(form.amount) || 0,
-    })
+    setIsSaving(true)
+
+    try {
+      await Promise.resolve(
+        onSave({
+          ...form,
+          clientName,
+          productId: firstItem?.productId || form.productId || '',
+          productName,
+          items,
+          purchaseTotal: total,
+          amount,
+          type,
+        }),
+      )
+    } catch {
+      setIsSaving(false)
+      setFormError('No se pudo guardar el pago. Intentalo otra vez.')
+    }
   }
 
   return (
@@ -149,6 +200,7 @@ export default function PaymentModal({
         >
           <motion.form
             onSubmit={handleSubmit}
+            noValidate
             initial={{ opacity: 0, y: 22, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 22, scale: 0.98 }}
@@ -230,7 +282,7 @@ export default function PaymentModal({
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_0.75fr_0.7fr_0.75fr_auto]">
+                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_0.7fr_0.75fr_auto]">
                   <label className="block">
                     <span className="text-xs font-medium text-[color:var(--muted)]">
                       Inventario
@@ -263,23 +315,6 @@ export default function PaymentModal({
                       className="focus-ring mt-1 w-full rounded-md border border-[color:var(--line)] bg-[color:var(--canvas)] px-3 py-2.5 text-sm text-[color:var(--ink)] outline-none"
                       placeholder="Perfume, bolsa..."
                     />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-xs font-medium text-[color:var(--muted)]">
-                      Categoria
-                    </span>
-                    <select
-                      value={itemDraft.category}
-                      onChange={(event) =>
-                        updateItemDraft('category', event.target.value)
-                      }
-                      className="focus-ring mt-1 w-full rounded-md border border-[color:var(--line)] bg-[color:var(--canvas)] px-3 py-2.5 text-sm text-[color:var(--ink)] outline-none"
-                    >
-                      {PRODUCT_CATEGORIES.map((category) => (
-                        <option key={category}>{category}</option>
-                      ))}
-                    </select>
                   </label>
 
                   <label className="block">
@@ -335,8 +370,7 @@ export default function PaymentModal({
                             {item.name}
                           </p>
                           <p className="mt-1 text-xs text-[color:var(--muted)]">
-                            {item.category || 'Sin categoria'} · Cant.{' '}
-                            {item.quantity}
+                            Cant. {item.quantity}
                           </p>
                         </div>
                         <p className="text-sm font-semibold text-[color:var(--ink)]">
@@ -383,7 +417,7 @@ export default function PaymentModal({
                 </span>
                 <select
                   value={form.type}
-                  onChange={(event) => updateField('type', event.target.value)}
+                  onChange={(event) => updatePaymentType(event.target.value)}
                   className="focus-ring mt-2 w-full rounded-md border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-3 text-sm text-[color:var(--ink)] outline-none"
                 >
                   {PAYMENT_TYPES.map((type) => (
@@ -447,6 +481,12 @@ export default function PaymentModal({
               </label>
             </div>
 
+            {formError ? (
+              <p className="mt-4 rounded-md border border-[color:var(--danger)]/20 bg-[color:var(--danger)]/10 px-4 py-3 text-sm font-medium text-[color:var(--danger)]">
+                {formError}
+              </p>
+            ) : null}
+
             <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[color:var(--line)] pt-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -457,9 +497,10 @@ export default function PaymentModal({
               </button>
               <button
                 type="submit"
-                className="focus-ring rounded-md bg-[color:var(--ink)] px-5 py-3 text-sm font-semibold text-[color:var(--surface)] transition hover:-translate-y-0.5 hover:shadow-lg"
+                disabled={isSaving}
+                className="focus-ring rounded-md bg-[color:var(--ink)] px-5 py-3 text-sm font-semibold text-[color:var(--surface)] transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
-                Guardar pago
+                {isSaving ? 'Guardando...' : 'Guardar pago'}
               </button>
             </div>
           </motion.form>

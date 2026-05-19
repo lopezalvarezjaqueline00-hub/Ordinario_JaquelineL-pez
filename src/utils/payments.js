@@ -1,10 +1,27 @@
+export const normalizePaymentType = (type) => {
+  const value = String(type || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  if (value === 'sin pago') {
+    return 'Sin Pago'
+  }
+
+  if (value === 'pago completo' || value === 'liquidacion') {
+    return 'Pago Completo'
+  }
+
+  return 'Anticipo'
+}
+
 export const normalizePaymentItems = (payment) => {
   if (Array.isArray(payment?.items) && payment.items.length) {
     return payment.items.map((item, index) => ({
       id: item.id || `${payment.id || 'payment'}-item-${index}`,
       productId: item.productId || '',
       name: item.name || item.productName || 'Articulo',
-      category: item.category || '',
       quantity: Number(item.quantity) || 1,
       price: Number(item.price) || 0,
     }))
@@ -16,7 +33,6 @@ export const normalizePaymentItems = (payment) => {
         id: `${payment.id || 'payment'}-legacy-item`,
         productId: payment.productId || '',
         name: payment.productName || 'Articulo',
-        category: '',
         quantity: 1,
         price: Number(payment.purchaseTotal || payment.amount) || 0,
       },

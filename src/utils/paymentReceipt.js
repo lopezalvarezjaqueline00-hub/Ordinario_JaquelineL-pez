@@ -1,6 +1,10 @@
 import { jsPDF } from 'jspdf'
 import { formatCurrency, formatDate } from './formatters'
-import { getPaymentPurchaseTotal, normalizePaymentItems } from './payments'
+import {
+  getPaymentPurchaseTotal,
+  normalizePaymentItems,
+  normalizePaymentType,
+} from './payments'
 
 const PAGE = {
   margin: 48,
@@ -79,7 +83,7 @@ export const downloadPaymentReceipt = (payment, settings = {}) => {
 
   y = 154
   addLabelValue(doc, 'Clienta', payment.clientName, PAGE.margin, y)
-  addLabelValue(doc, 'Tipo de pago', payment.type, 220, y)
+  addLabelValue(doc, 'Tipo de pago', normalizePaymentType(payment.type), 220, y)
   addLabelValue(doc, 'Metodo', payment.method, 390, y)
 
   y += 64
@@ -117,13 +121,6 @@ export const downloadPaymentReceipt = (payment, settings = {}) => {
       doc.setFontSize(10)
       doc.setTextColor(27, 25, 23)
       doc.text(itemLines, PAGE.margin, y)
-
-      if (item.category) {
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8)
-        doc.setTextColor(132, 124, 113)
-        doc.text(item.category, PAGE.margin, y + itemLines.length * 12 + 5)
-      }
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)

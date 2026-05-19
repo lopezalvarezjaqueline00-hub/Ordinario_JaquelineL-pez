@@ -18,6 +18,7 @@ import { PRODUCT_CATEGORIES, PRODUCT_STATUSES } from '../data/initialProducts'
 import { usePayments } from '../hooks/usePayments'
 import { useProducts } from '../hooks/useProducts'
 import { formatCurrency } from '../utils/formatters'
+import { normalizePaymentType } from '../utils/payments'
 
 const chartColors = ['#9f5f52', '#68735d', '#af8138', '#313234', '#d9a79b']
 
@@ -61,7 +62,7 @@ export default function AnalyticsPage() {
     const paymentsByType = PAYMENT_TYPES.map((type) => ({
       type,
       monto: payments
-        .filter((payment) => payment.type === type)
+        .filter((payment) => normalizePaymentType(payment.type) === type)
         .reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
     })).filter((item) => item.monto > 0)
 

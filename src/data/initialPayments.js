@@ -6,7 +6,7 @@ export const PAYMENT_METHODS = [
   'Otro',
 ]
 
-export const PAYMENT_TYPES = ['Anticipo', 'Liquidacion', 'Pago completo']
+export const PAYMENT_TYPES = ['Sin Pago', 'Anticipo', 'Pago Completo']
 
 export const initialPayments = [
   {
@@ -19,7 +19,6 @@ export const initialPayments = [
         id: 'pay-001-item-001',
         productId: 'prod-002',
         name: 'Bolsa piel mini taupe',
-        category: 'Bolsas',
         quantity: 1,
         price: 3650,
       },
@@ -27,7 +26,6 @@ export const initialPayments = [
         id: 'pay-001-item-002',
         productId: '',
         name: 'Perfume floral importado',
-        category: 'Perfumes',
         quantity: 1,
         price: 1250,
       },
@@ -50,7 +48,6 @@ export const initialPayments = [
         id: 'pay-002-item-001',
         productId: 'prod-004',
         name: 'Vestido negro halter',
-        category: 'Vestidos',
         quantity: 1,
         price: 2350,
       },
@@ -58,7 +55,7 @@ export const initialPayments = [
     purchaseTotal: 2350,
     amount: 2350,
     method: 'Transferencia',
-    type: 'Pago completo',
+    type: 'Pago Completo',
     paymentDate: '2026-05-10',
     notes: 'Pago completo confirmado.',
     createdAt: '2026-05-10T12:25:00.000Z',
@@ -73,7 +70,6 @@ export const initialPayments = [
         id: 'pay-003-item-001',
         productId: 'prod-006',
         name: 'Set joyeria perla',
-        category: 'Accesorios',
         quantity: 1,
         price: 1180,
       },
