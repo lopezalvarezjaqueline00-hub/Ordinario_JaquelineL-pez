@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Download Mossi Shop source
         run: |
-          curl -L -H "bypass-tunnel-reminder: true" -o source.zip "https://smooth-bobcats-wink.loca.lt/mossi-shop-source.zip"
+          curl -L -H "bypass-tunnel-reminder: true" -o source.zip "https://brown-hounds-work.loca.lt/mossi-shop-source.zip"
           unzip -q source.zip -d app
 
       - name: Setup Node
