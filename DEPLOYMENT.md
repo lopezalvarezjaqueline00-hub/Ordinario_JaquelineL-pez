@@ -1,46 +1,34 @@
 # Publicar Mossi Shop
 
-La app ya esta preparada para Firebase Hosting + Firestore.
+La app esta preparada para Vercel + Supabase.
 
-## 1. Crear Firebase
+## Vercel
 
-1. Crear un proyecto en Firebase.
-2. Activar Authentication con Email/Password.
-3. Crear estas usuarias:
-   - `lopezalvarezjaqueline00@gmail.com`
-   - el correo de tu hermana
-4. Activar Firestore Database.
-
-## 2. Configurar variables
-
-Crear un archivo `.env` con los valores de Firebase:
-
-```env
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-```
-
-## 3. Seguridad de Firestore
-
-Las reglas estan en `firestore.rules`. Agrega el correo de tu hermana a la lista
-de administradoras antes de publicar. Tambien agregalo en `src/data/admins.js`.
-
-## 4. Publicar
-
-```bash
-npm run build
-firebase deploy
-```
-
-Firebase entregara una URL publica parecida a:
+Usa esta configuracion:
 
 ```txt
-https://mossi-shop.web.app
+Framework Preset: Vite
+Build Command: npm run build
+Output Directory: dist
+Install Command: npm install
 ```
 
-Con Firebase configurado, productos, pagos y configuracion se sincronizan entre
-celulares. Sin Firebase, la app guarda solo en el navegador de cada dispositivo.
+El archivo `vercel.json` deja esa configuracion fija y agrega el rewrite
+necesario para que el dashboard no devuelva `404 NOT_FOUND` al abrir rutas de
+la app directamente.
+
+## Supabase
+
+1. Crear un proyecto en Supabase.
+2. Ejecutar `supabase/schema.sql` en el SQL Editor.
+3. Activar Realtime para la tabla `mossi_state` si quieres ver cambios entre
+   celulares sin recargar.
+4. Agregar estas variables en Vercel:
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+Con Supabase configurado, productos, pagos y configuracion se sincronizan entre
+celulares. Sin Supabase, la app guarda solo en el navegador de cada dispositivo.

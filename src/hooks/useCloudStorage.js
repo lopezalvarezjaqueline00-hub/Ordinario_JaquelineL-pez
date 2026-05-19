@@ -6,6 +6,11 @@ import {
   getFirebaseDb,
   isFirebaseConfigured,
 } from '../services/firebase'
+import {
+  getSupabaseClient,
+  isSupabaseConfigured,
+  SUPABASE_STATE_TABLE,
+} from '../services/supabase'
 import { safeJsonParse } from '../utils/storage'
 
 const getInitialValue = (initialValue) =>
@@ -27,7 +32,99 @@ export function useCloudStorage(key, initialValue, cloudKey) {
   }, [key, value])
 
   useEffect(() => {
-    if (!isFirebaseConfigured()) {
+    if (!isSupabaseConfigured()) {
+      return undefined
+    }
+
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      return undefined
+    }
+
+    let isMounted = true
+    cloudReady.current = false
+
+    const syncInitialValue = async () => {
+      const localValue = safeJsonParse(
+        localStorage.getItem(key),
+        getInitialValue(initialValue),
+      )
+
+      const { data, error } = await supabase
+        .from(SUPABASE_STATE_TABLE)
+        .select('value')
+        .eq('key', cloudKey)
+        .maybeSingle()
+
+      if (!isMounted) {
+        return
+      }
+
+      if (error) {
+        console.warn(`Supabase sync disabled for ${cloudKey}:`, error.message)
+        return
+      }
+
+      if (data) {
+        const nextValue = data.value ?? getInitialValue(initialValue)
+        lastRemoteValue.current = JSON.stringify(nextValue)
+        setValue(nextValue)
+        cloudReady.current = true
+        return
+      }
+
+      const serializedLocalValue = JSON.stringify(localValue)
+      lastRemoteValue.current = serializedLocalValue
+      cloudReady.current = true
+
+      const { error: upsertError } = await supabase
+        .from(SUPABASE_STATE_TABLE)
+        .upsert({
+          key: cloudKey,
+          value: localValue,
+          updated_at: new Date().toISOString(),
+        })
+
+      if (upsertError) {
+        console.warn(`Supabase sync disabled for ${cloudKey}:`, upsertError.message)
+      }
+    }
+
+    syncInitialValue()
+
+    const channel = supabase
+      .channel(`mossi-state-${cloudKey}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: SUPABASE_STATE_TABLE,
+          filter: `key=eq.${cloudKey}`,
+        },
+        (payload) => {
+          const nextValue = payload.new?.value
+
+          if (nextValue === undefined) {
+            return
+          }
+
+          lastRemoteValue.current = JSON.stringify(nextValue)
+          setValue(nextValue)
+          cloudReady.current = true
+        },
+      )
+      .subscribe()
+
+    return () => {
+      isMounted = false
+      supabase.removeChannel(channel)
+    }
+  }, [cloudKey, initialValue, key])
+
+  useEffect(() => {
+    if (isSupabaseConfigured() || !isFirebaseConfigured()) {
       return undefined
     }
 
@@ -92,15 +189,7 @@ export function useCloudStorage(key, initialValue, cloudKey) {
   }, [cloudKey, initialValue, key])
 
   useEffect(() => {
-    if (!isFirebaseConfigured() || !cloudReady.current) {
-      return undefined
-    }
-
-    const auth = getFirebaseAuth()
-    const db = getFirebaseDb()
-    const firebaseUser = auth?.currentUser
-
-    if (!db || !firebaseUser) {
+    if (!cloudReady.current) {
       return undefined
     }
 
@@ -111,8 +200,37 @@ export function useCloudStorage(key, initialValue, cloudKey) {
     }
 
     const timeout = window.setTimeout(async () => {
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabaseClient()
+
+        if (!supabase) {
+          return
+        }
+
+        const { error } = await supabase.from(SUPABASE_STATE_TABLE).upsert({
+          key: cloudKey,
+          value,
+          updated_at: new Date().toISOString(),
+        })
+
+        if (error) {
+          console.warn(`Supabase write failed for ${cloudKey}:`, error.message)
+          return
+        }
+
+        lastRemoteValue.current = serializedValue
+        return
+      }
+
+      const auth = getFirebaseAuth()
+      const db = getFirebaseDb()
+      const firebaseUser = auth?.currentUser
+
+      if (!db || !firebaseUser) {
+        return
+      }
+
       const stateDoc = getStateDoc(db, cloudKey)
-      lastRemoteValue.current = serializedValue
       await setDoc(
         stateDoc,
         {
@@ -122,6 +240,7 @@ export function useCloudStorage(key, initialValue, cloudKey) {
         },
         { merge: true },
       )
+      lastRemoteValue.current = serializedValue
     }, 350)
 
     return () => window.clearTimeout(timeout)
