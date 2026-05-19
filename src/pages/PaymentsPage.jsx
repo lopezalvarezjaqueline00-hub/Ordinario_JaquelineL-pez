@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import {
   FiCreditCard,
+  FiDownload,
   FiEdit2,
   FiPlus,
   FiSearch,
@@ -14,8 +15,10 @@ import StatCard from '../components/StatCard'
 import { PAYMENT_METHODS, PAYMENT_TYPES } from '../data/initialPayments'
 import { usePayments } from '../hooks/usePayments'
 import { useProducts } from '../hooks/useProducts'
+import { useSettings } from '../hooks/useSettings'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate, normalizeText } from '../utils/formatters'
+import { downloadPaymentReceipt } from '../utils/paymentReceipt'
 import {
   getPaymentItemsLabel,
   getPaymentPurchaseTotal,
@@ -60,6 +63,7 @@ export default function PaymentsPage({
     deletePayment,
   } = usePayments()
   const { products } = useProducts()
+  const { settings } = useSettings()
   const { notify } = useToast()
   const [filters, setFilters] = useState(initialFilters)
   const [modalOpen, setModalOpen] = useState(openCreateOnMount)
@@ -148,14 +152,39 @@ export default function PaymentsPage({
         message: `Se actualizo el pago de ${payload.clientName}.`,
       })
     } else {
-      addPayment(payload)
-      notify({
-        title: 'Pago registrado',
-        message: `${formatCurrency(payload.amount)} de ${payload.clientName}.`,
-      })
+      const savedPayment = addPayment(payload)
+      try {
+        downloadPaymentReceipt(savedPayment, settings)
+        notify({
+          title: 'Pago registrado',
+          message: `${formatCurrency(payload.amount)} de ${payload.clientName}. PDF generado.`,
+        })
+      } catch {
+        notify({
+          title: 'Pago registrado',
+          message: `Se guardo el pago de ${payload.clientName}, pero no se pudo descargar el PDF.`,
+          type: 'info',
+        })
+      }
     }
 
     closePaymentModal()
+  }
+
+  const handleDownloadReceipt = (payment) => {
+    try {
+      downloadPaymentReceipt(payment, settings)
+      notify({
+        title: 'PDF generado',
+        message: `Comprobante de ${payment.clientName} descargado.`,
+      })
+    } catch {
+      notify({
+        title: 'PDF no generado',
+        message: 'Intenta descargarlo nuevamente en unos segundos.',
+        type: 'error',
+      })
+    }
   }
 
   const confirmDelete = () => {
@@ -278,6 +307,7 @@ export default function PaymentsPage({
                 payment={payment}
                 onEdit={handleEdit}
                 onDelete={setDeleteTarget}
+                onDownload={handleDownloadReceipt}
               />
             ))}
           </div>
@@ -320,7 +350,7 @@ export default function PaymentsPage({
   )
 }
 
-function PaymentRow({ payment, onEdit, onDelete }) {
+function PaymentRow({ payment, onEdit, onDelete, onDownload }) {
   const items = normalizePaymentItems(payment)
   const purchaseTotal = getPaymentPurchaseTotal(payment)
   const paidAmount = Number(payment.amount || 0)
@@ -410,6 +440,15 @@ function PaymentRow({ payment, onEdit, onDelete }) {
             {formatCurrency(payment.amount)}
           </p>
           <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => onDownload(payment)}
+              className="focus-ring rounded-md p-2 text-[color:var(--muted)] transition hover:bg-[color:var(--surface-muted)] hover:text-[color:var(--ink)]"
+              aria-label={`Descargar PDF de pago de ${payment.clientName}`}
+              title="Descargar PDF"
+            >
+              <FiDownload className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={() => onEdit(payment)}
