@@ -9,9 +9,10 @@ export default function LoginPage() {
   const { login } = useAuth()
   const { settings } = useSettings()
   const { notify } = useToast()
-  const [email, setEmail] = useState('sofia@mossishop.com')
+  const [email, setEmail] = useState('lopezalvarezjaqueline00@gmail.com')
   const [password, setPassword] = useState('Mossi2026!')
   const [submitting, setSubmitting] = useState(false)
+  const logoSrc = `${import.meta.env.BASE_URL}logo-mossi.png`
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -33,37 +34,25 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[color:var(--canvas)] px-4 py-8 text-[color:var(--ink)]">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1fr_0.82fr]">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_0.82fr]">
         <motion.section
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="hidden lg:block"
+          className="hidden lg:flex lg:flex-col lg:items-start"
         >
           <p className="text-sm uppercase text-[color:var(--muted)]">
             Personal shopper suite
           </p>
-          <h1 className="mt-5 max-w-xl text-5xl font-semibold leading-[1.05] text-[color:var(--ink)]">
-            {settings.storeName}
-          </h1>
+          <img
+            src={logoSrc}
+            alt={settings.storeName}
+            className="mt-8 w-full max-w-[620px] object-contain"
+          />
           <p className="mt-6 max-w-lg text-lg leading-8 text-[color:var(--muted)]">
             Inventario boutique para organizar compras, apartados, ventas y
             piezas listas para entregar.
           </p>
-          <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
-            {[
-              'Curated closet',
-              'Luxury basics',
-              'Smart stock',
-            ].map((label) => (
-              <div
-                key={label}
-                className="rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] p-4 text-sm font-medium shadow-sm"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
         </motion.section>
 
         <motion.form
@@ -74,9 +63,11 @@ export default function LoginPage() {
           className="glass-panel mx-auto w-full max-w-md rounded-lg p-6 sm:p-8"
         >
           <div className="mb-8">
-            <span className="grid h-12 w-12 place-items-center rounded-lg bg-[color:var(--ink)] text-sm font-semibold text-[color:var(--surface)]">
-              MS
-            </span>
+            <img
+              src={logoSrc}
+              alt={settings.storeName}
+              className="h-auto w-36 object-contain"
+            />
             <p className="mt-6 text-sm uppercase text-[color:var(--muted)]">
               Acceso privado
             </p>
